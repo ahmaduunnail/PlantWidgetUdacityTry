@@ -5,9 +5,13 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
+import com.example.android.mygarden.provider.PlantContract;
 import com.example.android.mygarden.ui.MainActivity;
+import com.example.android.mygarden.ui.PlantDetailActivity;
 
 /**
  * Implementation of App Widget functionality.
@@ -15,20 +19,31 @@ import com.example.android.mygarden.ui.MainActivity;
 public class PlantWidgetProvider extends AppWidgetProvider {
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
-                                int imageRes, int appWidgetId) {
+                                int imageRes, long plantId, boolean water, int appWidgetId) {
 
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.plant_widget);
 
-        Intent intent = new Intent(context, MainActivity.class);
+        Intent intent;
+        if (plantId == PlantContract.INVALID_PLANT_ID){
+            intent = new Intent(context, MainActivity.class);
+        }else {
+            Log.d(PlantWidgetProvider.class.getSimpleName(), "planId=" + plantId);
+            intent = new Intent(context, PlantDetailActivity.class);
+            intent.putExtra(PlantDetailActivity.EXTRA_PLANT_ID, plantId);
+        }
         PendingIntent pendingIntent = PendingIntent.getActivity(context,0,intent,0);
 
         views.setImageViewResource(R.id.widget_plant_image, imageRes);
         views.setOnClickPendingIntent(R.id.widget_plant_image, pendingIntent);
 
+        if (water) views.setViewVisibility(R.id.widget_water_button, View.VISIBLE);
+        else views.setViewVisibility(R.id.widget_water_button, View.INVISIBLE);
+
         // Add the wateringservice click handler
         Intent wateringIntent = new Intent(context, PlantWateringService.class);
-        wateringIntent.setAction(PlantWateringService.ACTION_WATER_PLANTS);
+        wateringIntent.setAction(PlantWateringService.ACTION_WATER_PLANT);
+        wateringIntent.putExtra(PlantWateringService.EXTRA_PLANT_ID, plantId);
         PendingIntent wateringPendingIntent = PendingIntent.getService(context, 0, wateringIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(R.id.widget_water_button, wateringPendingIntent);
         // Instruct the widget manager to update the widget
@@ -42,9 +57,9 @@ public class PlantWidgetProvider extends AppWidgetProvider {
     }
 
     public static void updatePlantsWidgets(Context context, AppWidgetManager appWidgetManager,
-                                           int imageRes, int[] appWidggets){
+                                           int imageRes, long plantId, boolean water, int[] appWidggets){
         for (int appwidgetids : appWidggets){
-            updateAppWidget(context, appWidgetManager, imageRes, appwidgetids);
+            updateAppWidget(context, appWidgetManager, imageRes, plantId, water, appwidgetids);
         }
     }
 
